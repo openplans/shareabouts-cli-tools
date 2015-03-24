@@ -54,6 +54,7 @@ class ShareaboutsTool (object):
         self.api_root = host + '/api/v2/'
         self.places_url_template = self.api_root + '%s/datasets/%s/places'
         self.submissions_url_template = self.api_root + '%s/datasets/%s/submissions'
+        self.snapshots_url_template = self.api_root + '%s/datasets/%s/%s/snapshots'
 
         self.api = ShareaboutsApi(self.api_root)
         if auth:
@@ -110,6 +111,77 @@ class ShareaboutsTool (object):
         print(file=sys.stderr)
 
         return list(places)
+
+    def get_snapshot(self, owner, dataset, set_name='places', format='json', force_new=False, params=None):
+        snapshots_url = (self.snapshots_url_template % (owner, dataset, set_name))
+        if params is None: params = self.fetch_params
+        send_data = params.copy()
+
+        snapshots = None
+        if not force_new:
+            # Check to see whether we already have a snapshot
+            try: from urllib.parse import urlencode
+            except: from urllib import urlencode
+
+            print('Checking for existing %s snapshots from %s with params %s...' % (set_name, snapshots_url, params), file=sys.stderr)
+            response = self.api.send('GET', snapshots_url + '?' + urlencode(send_data))
+
+            assert response.status_code != 404, 'Dataset %s/%s cannot be found' % (owner, dataset)
+            if response.status_code != 200:
+                raise Exception('Unexpected response from %s snapshot for dataset %s/%s: %s, %s' % (set_name, owner, dataset, response.status_code, response.content))
+
+            try:
+                snapshots = response.json()
+            except ValueError:
+                raise Exception('Unexpected non-JSON content from %s snapshot for dataset %s/%s: %s' % (set_name, owner, dataset, response.content))
+
+        if snapshots:
+            # If there are snapshots, get the one with the latest requested
+            # datetime.
+            snapshot = max(snapshots, key=lambda sn: sn.get('requested_at'))
+            print('Using existing %s snapshot from %s taken at %s...' % (set_name, snapshots_url, snapshot['requested_at']), file=sys.stderr)
+
+            try:
+                snapshot_url = snapshot['url']
+            except KeyError:
+                raise Exception('%s snapshot for dataset %s/%s does not have a URL: %s' % (set_name, owner, dataset, snapshot))
+        else:
+            # If we don't have any snapshots (or we explicitly want a new one),
+            # request that one be created and wait.
+            print('Requesting new %s snapshot from %s...' % (set_name, snapshots_url,), file=sys.stderr)
+            response = self.api.send('POST', snapshots_url, data=send_data)
+
+            assert response.status_code != 404, 'Dataset %s/%s cannot be found' % (owner, dataset)
+            if response.status_code not in (200, 201, 202):
+                raise Exception('Unexpected response from %s snapshot for dataset %s/%s: %s, %s' % (set_name, owner, dataset, response.status_code, response.content))
+
+            try:
+                snapshot_url = response.json()['url']
+            except ValueError:
+                raise Exception('Unexpected non-JSON content from new %s snapshot request for dataset %s/%s: %s' % (set_name, owner, dataset, response.content))
+            except KeyError:
+                raise Exception('Unexpected JSON content from new %s snapshot request for dataset %s/%s (no URL): %s' % (set_name, owner, dataset, response.content))
+
+        snapshot_url += '.' + format
+        first_check = True
+        while True:
+            # Forever, try to download the snapshot.
+            response = requests.get(snapshot_url)
+
+            if response.status_code == 503:
+                if first_check:
+                    print('Waiting for %s snapshot from %s...' % (set_name, snapshots_url,), file=sys.stderr, end='')
+                    first_check = False
+                else:
+                    print('.', file=sys.stderr, end='')
+                time.sleep(2)
+
+            elif response.status_code == 200:
+                if not first_check: print('', file=sys.stderr)
+                return response.content
+
+            else:
+                raise Exception('Unexpected response from %s snapshot for dataset %s/%s: %s, %s' % (set_name, owner, dataset, response.status_code, response.content))
 
     def get_submissions(self, owner, dataset):
         dataset = self.api.account(owner).dataset(dataset)
