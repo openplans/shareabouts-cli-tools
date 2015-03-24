@@ -193,12 +193,15 @@ if __name__ == '__main__':
     parser.add_argument('configuration', help='The dataset configuration file name')
     parser.add_argument('report', help='The report configuration file name')
     parser.add_argument('--subject', default='', help='The subject of the email to be sent.')
-    # parser.add_argument('--begin', default='0001-01-01', help='The date from which you want results. Submissions on or after this date will be included.')
-    # parser.add_argument('--end', default='9999-12-31', help='The date until which you want results. Submissions before this date will be included.')
+    parser.add_argument('--begin', help='The date from which you want results. Submissions on or after this date will be included.')
+    parser.add_argument('--end', help='The date until which you want results. Submissions before this date will be included.')
 
     args = parser.parse_args()
     config = json.load(open(args.configuration))
     report = json.load(open(args.report))
+
+    if args.begin: report['begin_date'] = args.begin
+    if args.end: report['end_date'] = args.end
 
     if args.subject and 'email' in config:
         config['email']['subject'] = args.subject
