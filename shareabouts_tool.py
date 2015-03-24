@@ -295,7 +295,7 @@ class ShareaboutsTool (object):
         # Load the new places from the file
         loaded_places = []
 
-        with open(source_filename, 'rU') as csv_file:
+        with open(source_filename) as csv_file:
             reader = csv.reader(csv_file)
             headers = None
 
