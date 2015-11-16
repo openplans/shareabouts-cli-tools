@@ -103,10 +103,7 @@ helpers['annotate_with_places'] = _annotate_with_places
 # ============================================================================
 
 
-def main(config, report):
-    template_filename = report.get('summary_template')
-    assert template_filename, 'No template file specified'
-
+def main(config, reports):
     if 'username' in config and 'password' in config:
         auth_info = (config['username'], config['password'])
     else:
@@ -119,6 +116,15 @@ def main(config, report):
 
     global dataset
     dataset = tool.api.account(config['owner']).dataset(config['dataset'])
+
+    for report in reports:
+        status = generate_single_report(config, report, tool, dataset, places, submissions)
+        if status != 0: return status
+
+
+def generate_single_report(config, report, tool, dataset, places, submissions):
+    template_filename = report.get('summary_template')
+    assert template_filename, 'No template file specified'
 
     # Compile the template
     print ('Compiling and rendering the template(s): %s' % (report['summary_template'],), file=sys.stderr)
@@ -142,8 +148,8 @@ def main(config, report):
     tool.convert_times(submissions, localtz)
     tool.convert_times(dataset, localtz)
 
-    helpers['config'] = lambda this, attr: config[attr]
-    helpers['report'] = lambda this, attr: report[attr]
+    helpers['config'] = lambda this, attr=None: config if attr is None else config[attr]
+    helpers['report'] = lambda this, attr=None: report if attr is None else report[attr]
 
     # Render the template
     rendered_template = template({
@@ -155,57 +161,70 @@ def main(config, report):
 
     # Print the template, and send it where it needs to go
     doc = str_type(rendered_template)
-    with os.fdopen(sys.stdout.fileno(), 'wb') as stdout_b:
-        stdout_b.write(doc.encode('utf-8'))
 
-    # Send an email
-    # NOTE: Remember, you must register your sender email addresses with
-    #       Postmark: https://postmarkapp.com/signatures
-    email_body = {
-         "From" : config['email']['sender'],
-         "To" : config['email']['recipient'],
-         "Subject" : config['email']['subject'],
-         "Bcc" : config['email']['bcc'],
-         "HtmlBody" : doc,
-         # "TextBody" : rendered_template,
-         "ReplyTo" : config['email']['sender'],
-         # "Headers" : [{}]
-    }
+    if 'outfile' in report:
+        print('Outputting report file: {}'.format(report['outfile']), file=sys.stderr)
+        import codecs
+        with codecs.open(report['outfile'], 'w', 'utf-8') as outfile:
+            outfile.write(doc)
+    else:
+        with os.fdopen(outfile.fileno(), 'wb') as outfile_b:
+            outfile_b.write(doc.encode('utf-8'))
 
-    email_headers = {
-         'Content-type': 'application/json',
-         'X-Postmark-Server-Token': config['postmarkapp_token']
-    }
 
-    if doc.strip() != '':
-        response = requests.post('https://api.postmarkapp.com/email',
-             data=json.dumps(email_body),
-            headers=email_headers
-        )
+    if 'email' in config:
+        # Send an email
+        # NOTE: Remember, you must register your sender email addresses with
+        #       Postmark: https://postmarkapp.com/signatures
+        email_body = {
+             "From" : config['email']['sender'],
+             "To" : config['email']['recipient'],
+             "Subject" : config['email']['subject'],
+             "Bcc" : config['email']['bcc'],
+             "HtmlBody" : doc,
+             # "TextBody" : rendered_template,
+             "ReplyTo" : config['email']['sender'],
+             # "Headers" : [{}]
+        }
 
-        if response.status_code != 200:
-            print('Received a non-success response (%s): %s' % (response.status_code, response.content), file=sys.stderr)
+        email_headers = {
+             'Content-type': 'application/json',
+             'X-Postmark-Server-Token': config['postmarkapp_token']
+        }
+
+        if doc.strip() != '':
+            response = requests.post('https://api.postmarkapp.com/email',
+                 data=json.dumps(email_body),
+                headers=email_headers
+            )
+
+            if response.status_code != 200:
+                print('Received a non-success response (%s): %s' % (response.status_code, response.content), file=sys.stderr)
 
     return 0
 
 if __name__ == '__main__':
     parser = ArgumentParser(description='Print the number of places in a dataset.')
     parser.add_argument('configuration', help='The dataset configuration file name')
-    parser.add_argument('report', help='The report configuration file name')
+    parser.add_argument('reports', help='The report configuration file name(s)', nargs='+')
     parser.add_argument('--subject', default='', help='The subject of the email to be sent.')
     parser.add_argument('--begin', help='The date from which you want results. Submissions on or after this date will be included.')
     parser.add_argument('--end', help='The date until which you want results. Submissions before this date will be included.')
 
     args = parser.parse_args()
     config = json.load(open(args.configuration))
-    report = json.load(open(args.report))
+    reports = [json.load(open(r)) for r in args.reports]
 
-    if args.begin: report['begin_date'] = args.begin
-    if args.end: report['end_date'] = args.end
+    if args.begin:
+        for r in reports:
+            r['begin_date'] = args.begin
+    if args.end:
+        for r in reports:
+            r['end_date'] = args.end
 
     if args.subject and 'email' in config:
         config['email']['subject'] = args.subject
 
     # main(config, args.template, args.begin, args.end)
-    result = main(config, report) or 0
+    result = main(config, reports) or 0
     sys.exit(result)
