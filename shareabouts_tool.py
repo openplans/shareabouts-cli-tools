@@ -355,8 +355,8 @@ class ShareaboutsTool (object):
         print('%s place(s) loaded, with %s having been seen before.' % (len(loaded_places), len([place for place in loaded_places if 'url' in place['properties']])), file=sys.stderr)
         return loaded_places
 
-    def save_places(self, owner, dataset, dataset_key, loaded_places, callback, silent=True, create=True, update=True):
-        # Upload the places, with PUT if they have a URL, otherwise with POST
+    def save_places(self, owner, dataset, dataset_key, loaded_places, callback, silent=True, create=True, update=True, partial=True):
+        # Upload the places, with PATCH/PUT if they have a URL, otherwise with POST
         places_url = self.places_url_template % (owner, dataset)
 
         # Create threads in chunks so that we don't run out of available
@@ -367,7 +367,7 @@ class ShareaboutsTool (object):
                 if (update and 'url' in place['properties']) or \
                    (create and 'url' not in place['properties']):
                     thread = UploadPlaceThread(place, places_url, dataset_key, callback,
-                        silent=silent, create=create, update=update)
+                        silent=silent, create=create, update=update, partial=partial)
                     thread.start()
                     save_threads.append(thread)
 
@@ -391,7 +391,7 @@ class ShareaboutsTool (object):
 class UploadPlaceThread (threading.Thread):
     finite_threads = threading.BoundedSemaphore(value=4)
 
-    def __init__(self, place, places_url, dataset_key, callback, silent=True, create=True, update=True):
+    def __init__(self, place, places_url, dataset_key, callback, silent=True, create=True, update=True, partial=True):
         self.place = place
         self.places_url = places_url
         self.dataset_key = dataset_key
@@ -400,6 +400,7 @@ class UploadPlaceThread (threading.Thread):
         self.silent = silent
         self.create = create
         self.update = update
+        self.partial = partial
 
         super(UploadPlaceThread, self).__init__()
 
@@ -418,7 +419,8 @@ class UploadPlaceThread (threading.Thread):
 
     def update_place(self):
         place_url = self.place['properties']['url']
-        return requests.put(
+        update_func = requests.patch if self.partial else requests.put
+        return update_func(
             place_url,
             data=json.dumps(self.place),
             headers={

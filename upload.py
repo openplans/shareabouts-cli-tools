@@ -34,8 +34,13 @@ def get_gone_places(config, mapped_places, loaded_places):
     gone_places = [place for (mapped_id, place) in mapped_places.items() if mapped_id not in loaded_ids]
     return gone_places
 
-def main(config, silent=True, create=True, update=True, delete=False):
-    tool = ShareaboutsTool(config['host'])
+def main(config, silent=True, create=True, update=True, delete=False, partial=True):
+    if 'username' in config and 'password' in config:
+        auth_info = (config['username'], config['password'])
+    else:
+        auth_info = None
+
+    tool = ShareaboutsTool(config['host'], auth=auth_info)
     all_places = tool.get_places(config['owner'], config['dataset'])
     mapped_places = tool.get_source_place_map(all_places, mapped_id_field=config.get('mapped_id_field', '_imported_id'))
 
@@ -59,7 +64,7 @@ def main(config, silent=True, create=True, update=True, delete=False):
 
         tool.save_places(
             config['owner'], config['dataset'], config['key'],
-            loaded_places, place_done_callback, silent=silent, create=create, update=update)
+            loaded_places, place_done_callback, silent=silent, create=create, update=update, partial=partial)
 
     gone_places = get_gone_places(config, mapped_places, loaded_places)
     gone_place_urls = [str(place.get('url')) for place in gone_places]
@@ -83,6 +88,7 @@ if __name__ == '__main__':
     parser.add_argument('configuration', type=str, help='The configuration file name')
     parser.add_argument('-c', '--create', dest='create', action='store_true', help='Create non-existant places')
     parser.add_argument('-u', '--update', dest='update', action='store_true', help='Update pre-existing places')
+    parser.add_argument('-r', '--replace', dest='replace', action='store_true', help='Replace existing updated places in full, instead of doing a partial update')
     parser.add_argument('-d', '--delete', dest='delete', action='store_true', help='Delete no longer existing places')
     parser.add_argument('-A', '--do-all', dest='allmod', action='store_true', help='Do all modifiation actions; equivalent to -cud')
     parser.add_argument('-V', '--activity', dest='silent', action='store_false' ,help='Create dataset activity when creating and updating places')
@@ -95,4 +101,4 @@ if __name__ == '__main__':
         args.update = True
         args.delete = True
 
-    main(config, create=args.create, update=args.update, delete=args.delete, silent=args.silent)
+    main(config, create=args.create, update=args.update, delete=args.delete, silent=args.silent, partial=not args.replace)
