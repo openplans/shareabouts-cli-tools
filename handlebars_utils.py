@@ -188,7 +188,10 @@ def _group_by(this, options, *args):
     grouped_context = defaultdict(list)
     for elem in iterable:
         group_key = group_key_maker(elem, attr_name)
-        grouped_context[group_key].append(elem)
+        try:
+            grouped_context[group_key].append(elem)
+        except TypeError as e:
+            raise TypeError('Attribute {!r} resolved to {}'.format(attr_name, e))
 
     return _each_sorted(this, options, grouped_context, reverse)
 
