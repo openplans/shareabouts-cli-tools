@@ -1,0 +1,12 @@
+{
+    "summary_template": "templates/ourmiami14.html",
+    "begin_date": "2013-09-01",
+    "end_date": "2015-11-13",
+    "timezone": "US/Eastern",
+
+    "postmarkapp_token": "6b5a35e7-90a0-49e4-86b6-ade984883d80",
+    "email": {
+        "sender": "mpoe@openplans.org",
+        "recipient": "mjumbewu@gmail.com"
+    }
+}

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+</head>
+
+<body>
+
+<link rel="stylesheet" href="normalize.css" type="text/css" media="all" />
+<link rel="stylesheet" href="pbnyc-style.css" type="text/css" media="all" />
+
+  <h1>{{report.title}} for District {{report.district}}</h1>
+  <h3>Summary:
+    {{#filter_by dataset.places "properties.CounDist" report.district}}{{ length . }}{{/filter_by}} ideas,
+    {{#with dataset.submission_sets.comments}}{{#annotate_with_places .}}{{#filter_by . "place.properties.CounDist" ../../report.district}}{{ length . }}{{/filter_by}}{{/annotate_with_places}}{{/with}} comments,
+    {{#with dataset.submission_sets.support}}{{#annotate_with_places .}}{{#filter_by . "place.properties.CounDist" ../../report.district}}{{ length . }}{{/filter_by}}{{/annotate_with_places}}{{/with}} support clicks
+  </h3>
+
+{{#with dataset.places}}
+  {{#filter_by . "properties.CounDist" ../report.district}}
+  <section id="new-places">
+  <!--h2>Ideas in District {{../../report.district}}</h2-->
+
+      {{#group_by_date "-properties.created_datetime"}}
+
+        {{#each .}}
+          <div class="idea-wrapper">
+            <div class="idea-summary">
+              <img class="category-marker" src="{{lookup ../../../../config.category_icons properties.location_type}}" title="{{lookup ../../../../config.category_names properties.location_type}}">
+              <div>{{length properties.submission_sets.support}} Support</div>
+              <div>{{length properties.submission_sets.comments}} Comments</div>
+
+              {{! Display edit link on screen }}
+              <div class="edit-link">(<a class="raw-data-link" href="{{config "host"}}/api/v2/{{config "owner"}}/datasets/{{config "dataset"}}/places/{{id}}?format=json" target="_blank">raw data</a>)</div>
+            </div>
+
+            <div class="idea-id">
+              Idea <a href="{{config "project_url"}}/place/{{id}}" target="blank" title="{{properties.name}}">#{{ properties.id }}</a> in the <strong class="h4">{{lookup ../../../../config.category_names properties.location_type}}</strong> category.</div>
+
+            <div class="idea-name meta-info">{{ properties.name}}</div>
+
+            <div class="submitter-info">
+              Submitted {{#if_any properties.submitter.name properties.submitter_name}} by {{first_of properties.submitter.name properties.submitter_name}} {{/if_any}} at {{format properties.created_datetime "%B %d, %I:%M %p"}}.
+
+              <div class="contact-info">
+                <span>E-mail: {{properties.[private-email]}}</span>
+                <span>Phone #: {{first_of properties.[private-phone] "(Not given)"}}</span>
+                <span>Home Zip Code: {{first_of properties.[private-zip] "(Not given)"}}</span>
+                <span>Age: {{first_of properties.[private-age] "(Not given)"}}</span>
+              </div>
+
+              {{! Display idea URL in print }}
+              <span class="idea-url">{{config "project_url"}}/place/{{id}}</span>
+            </div>
+
+            <div class="idea-description meta-info"><label>So that people could...</label> {{ properties.description }}</div>
+
+            <p class="maps">
+              <img src='http://api.tiles.mapbox.com/v3/openplans.ae84e8cf/pin-m-star+88c({{ geometry.coordinates.0 }},{{ geometry.coordinates.1 }})/{{ geometry.coordinates.0 }},{{ geometry.coordinates.1 }},13/350x200.png'>
+
+              <img src='http://api.tiles.mapbox.com/v3/openplans.ae84e8cf/pin-m-star+88c({{ geometry.coordinates.0 }},{{ geometry.coordinates.1 }})/{{ geometry.coordinates.0 }},{{ geometry.coordinates.1 }},17/350x200.png'></p>
+          </div>
+        {{/each}}
+
+      {{/group_by_date}}
+  </section>
+  {{/filter_by}}
+{{/with}}
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+  html {
+    width: 100%;
+  }
+  body {
+    max-width: 48em;
+    margin: 0 auto;
+    padding: 1em;
+    font-family: "Helvetica Neue",Arial,Helvetica,sans-serif;
+    line-height: 1.5;
+    background: #fff;
+    color: #555;
+  }
+  a:hover,
+  a:active {
+    outline: none;
+  }
+  a,
+  a:active,
+  a:visited {
+    color: #48a5bf;
+    word-wrap: break-word;
+  }
+  a:hover {
+    color: #18758f;
+  }
+  h1,h2,h3,h4,h5,h6 {
+    line-height: 1.25;
+    color: #333;
+    margin: 0 0 0.5em;
+  }
+  h1 {
+    font-size: 3em;
+  }
+  h2 {
+    font-size: 2.5em;
+  }
+  h3 {
+    font-size: 1.25em;
+    margin: 1.5em 0 0;
+    padding: 1em;
+    border-top: 1px solid #ccc;
+    border-bottom: 1px solid #ccc;
+  }
+  h4, .h4 {
+    font-size: 1.5em;
+  }
+  .h4 {
+    margin-top: 1.25em;
+    display: inline-block;
+  }
+  h5 {
+    font-size: 1.25em;
+  }
+  h6 {
+    font-size: 1em;
+    text-transform: uppercase;
+  }
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+  nav {
+    background-color: #18758f;
+    color: #999;
+    font-size: 0.875em;
+    border-radius: 0.5em;
+    margin: 0 0 2em;
+  }
+  nav a,
+  nav a:active,
+  nav a:visited {
+    color: #eee;
+    text-decoration: none;
+    font-weight: bold;
+    padding: 0.75em 1em;
+    display: inline-block;
+  }
+  nav a:hover {
+    color: #fff;
+  }
+  .meta-info {
+    color: #999;
+  }
+  #new-places,
+  #new-comments {
+    padding-bottom: 5em;
+  }
+  </style>
+
+</head>
+
+<body>
+  <section id="header"><h1><img src="http://ideas.ourmiami.org/static/css/images/mf-challange.gif"></h1>
+  <nav>
+    <a href="#new-places">Ideas</a> |
+    <a href="#new-comments">Comments</a>
+  </nav>
+  </section>
+  
+  <h2>Summary</h2>
+  <p>Ideas: {{length dataset.places }}</p>
+  <p>Comments: {{length dataset.submission_sets.comments }}</p>
+  <p>Support clicks: {{length dataset.submission_sets.support }}</p>
+  
+  <section id="new-places">
+  <h2>Ideas</h2>
+  {{#with dataset.places}}
+    {{#created_between ../report.begin_date ../report.end_date}}
+      {{#group_by_date "-properties.created_datetime"}}
+
+        <h3>{{length .}} ideas added on {{@key}}</h3>
+        
+        {{#each .}}
+        <a href="{{config "project_url"}}/place/{{id}}">
+          <strong class="h4">{{first_of properties.title properties.Title properties.TITLE}} </strong></a> #{{ properties.id }}. {{#if_any properties.submitter.name properties.submitter_name}} Submitted by {{first_of properties.submitter.name properties.submitter_name}} {{/if_any}} at {{format properties.created_datetime "%I:%M %p"}}.
+          <div class="meta-info">A {{properties.location_type}} idea.</div>
+          <p>{{ properties.description }}</p>
+          <p>{{ properties.details }}</p>          
+          <p><a href="{{ properties.infolink }}">{{ properties.infolink }}</a></p>
+
+        {{/each}}
+
+        <a href="#header"> &uarr; </a> 
+      {{/group_by_date}}
+    {{/created_between}}
+  {{/with}}
+
+  </section>
+
+  <section id="new-comments">
+  <h2>Comments</h2>
+  {{#with dataset.submission_sets.comments}}
+    {{#created_between ../report.begin_date ../report.end_date}}
+      {{#group_by_date "-created_datetime"}}
+
+      <h3>{{length .}} comments added on {{@key}}</h3>
+
+      {{#group_by "place"}}
+
+        {{#with_place @key}}
+        <a href="{{config "project_url"}}/place/{{id}}">
+          <strong class="h4">{{first_of properties.title properties.Title properties.TITLE}}</strong>
+        </a>
+        {{/with_place}}
+
+        <ul>
+        {{#sort_by "created_datetime"}}
+          {{#each .}}
+          <li>{{comment}} <em><time datetime="{{created_datetime}}">{{format created_datetime "%I:%M %p"}}</time> by {{first_of submitter_name submitter.name "an anonymous user"}}. (<a href="{{replace url "api/v2" "manage"}}/">manage</a>)</em>
+          </li>
+          {{/each}}
+        {{/sort_by}}
+      </ul>
+      {{/group_by}}
+      <a href="#header"> &uarr; </a> 
+      {{/group_by_date}}
+
+    {{/created_between}}
+  {{/with}}
+  </section>
+</body>
+</html>

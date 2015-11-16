@@ -1,0 +1,6 @@
+{
+"summary_template": "templates/pbnyc-2015-district.html",
+"outfile": "tmp/d35-summary.html",
+"district": 35,
+"title": "PB Report"
+}

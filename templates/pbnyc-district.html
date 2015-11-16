@@ -1,0 +1,77 @@
+{{#created_within_days 1 dataset.places}}
+  {{#filter_by . "properties.CounDist" ../config.report_district}}
+<!DOCTYPE html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+</head>
+
+<body>
+
+<link rel="stylesheet" href="normalize.css" type="text/css" media="all" />
+<link rel="stylesheet" href="style.css" type="text/css" media="all" />
+
+  <h1>{{config "report_title"}} for District {{../../config.report_district}}</h1>
+
+  <p><h3>Summary: {{^if properties.winner }}{{ length . }}{{/if}} ideas</h3></p>
+
+  <section id="new-places">
+  <h2>{{length .}} new ideas yesterday</h2>
+
+      {{#group_by_date "-properties.created_datetime"}}
+
+        {{#each .}}
+            Idea <a href="{{config "project_url"}}/place/{{id}}">#{{ properties.id }}</a> for <strong class="h4">{{properties.location_type}}</strong>. <br/> Submitted {{#if_any properties.submitter.name properties.submitter_name}} by {{first_of properties.submitter.name properties.submitter_name}} {{/if_any}} at {{format properties.created_datetime "%I:%M %p"}}. (<a href="http://data.shareabouts.org/admin/sa_api_v2/place/{{id}}">edit</a>)
+            <div class="meta-info">My idea is to... {{ properties.name}}</div>
+            <div class="meta-info">So that people could... {{ properties.description }}</div>
+             <p><img src='http://api.tiles.mapbox.com/v3/openplans.map-dmar86ym/pin-m-star+88c({{ geometry.coordinates.0 }},{{ geometry.coordinates.1 }})/{{ geometry.coordinates.0 }},{{ geometry.coordinates.1 }},13/350x200.png'>
+
+              <img src='http://api.tiles.mapbox.com/v3/openplans.map-dmar86ym/pin-m-star+88c({{ geometry.coordinates.0 }},{{ geometry.coordinates.1 }})/{{ geometry.coordinates.0 }},{{ geometry.coordinates.1 }},17/350x200.png'></p>
+              <br/>
+
+        {{/each}}
+
+      {{/group_by_date}}
+  </section>
+  {{/filter_by}}
+{{/created_within_days}}
+
+{{#created_within_days 30 dataset.submission_sets.comments}}
+  {{!-- Attach the full place data to each comment --}}
+  {{#annotate_with_places .}}
+
+<hr/>
+    {{!-- filter the comments by some property of their attached place --}}
+
+    {{../../config.report_district}}
+    {{#filter_by . "place.properties.CounDist" ../../config.report_district}}
+
+  <section id="new-comments">
+  <h2>{{length .}} new comments added yesterday</h2>
+      {{#group_by_date "-created_datetime"}}
+
+      {{#group_by "place.properties.url"}}
+
+        {{#with_place @key}}
+        <a href="{{config "project_url"}}/place/{{id}}">
+          <strong class="h4">{{properties.location_type}}</strong>
+        </a>
+        {{/with_place}}
+
+        <ul>
+        {{#sort_by "created_datetime"}}
+          {{#each .}}
+          <li>{{comment}} <em><time datetime="{{created_datetime}}">{{format created_datetime "%I:%M %p"}}</time> by {{first_of submitter_name submitter.name "an anonymous user"}}. (<a href="{{replace url "api/v2" "manage"}}/">manage</a>)</em>
+          </li>
+          {{/each}}
+        {{/sort_by}}
+        </ul>
+      {{/group_by}}
+      {{/group_by_date}}
+      {{/filter_by}}
+  </section>
+  {{/annotate_with_places}}
+{{/created_within_days}}
+</body>
+</html>
