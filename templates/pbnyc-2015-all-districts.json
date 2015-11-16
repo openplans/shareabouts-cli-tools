@@ -1,0 +1,34 @@
+{
+    "places_csv": {
+        "field_map": {
+            "Date/Time": "created_datetime",
+            "description": "description",
+            "Category": "location_type",
+            "# of comments": "submission_sets.comments.length",
+            "# of support": "submission_sets.support.length",
+        },
+        "field_order": [
+            "Borough",
+            "CounDist",
+            "CounPerson",
+            "Category",
+            "id",
+            "geometry",
+            "location.address",
+            "location.place_name",
+            "Date/Time",
+            "name",
+            "description",
+            "submitter.name",
+            "submitter_name",
+            "private-volunteer",
+            "private-email",
+            "private-phone",
+            "private-age",
+            "private-gender",
+            "private-zip",
+            "# of comments",
+            "# of support"
+        ]
+    }
+}
