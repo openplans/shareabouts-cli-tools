@@ -168,6 +168,7 @@ def generate_single_report(config, report, tool, dataset, places, submissions):
         with codecs.open(report['outfile'], 'w', 'utf-8') as outfile:
             outfile.write(doc)
     else:
+        outfile = sys.stdout
         with os.fdopen(outfile.fileno(), 'wb') as outfile_b:
             outfile_b.write(doc.encode('utf-8'))
 
